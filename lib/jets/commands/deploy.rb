@@ -18,7 +18,7 @@ module Jets::Commands
 
       # deploy full nested stack when stack already exists
       # Delete existing rollback stack from previous bad minimal deploy
-      delete_minimal_stack if minimal_rollback_complete?
+      delete_minimal_stack if minimal_rollback_complete? # Stack Trace #
       exit_unless_updateable! # Stack could be in a weird rollback state or in progress state
 
       if first_run?
@@ -90,7 +90,7 @@ module Jets::Commands
     #   * Parent resources are in the DELETE_COMPLETE state
     #
     def minimal_rollback_complete?
-      stack = find_stack(stack_name)
+      stack = find_stack(stack_name) # Stack Trace #
       return false unless stack
 
       return false unless stack.stack_status == 'ROLLBACK_COMPLETE'
@@ -101,9 +101,16 @@ module Jets::Commands
       resource_statuses == ['DELETE_COMPLETE']
     end
 
-    def find_stack(stack_name)
-      resp = cfn.describe_stacks(stack_name: stack_name)
+    def find_stack(stack_name) # Stack Trace #
+      resp = cfn.describe_stacks(stack_name: stack_name) # Stack Trace #
       resp.stacks.first
+    rescue Aws::CloudFormation::Errors::ValidationError => e
+      # example: Stack with id demo-dev does not exist
+      if e.message =~ /Stack with/ && e.message =~ /does not exist/
+        nil
+      else
+        raise
+      end
     end
 
     # All CloudFormation states listed here: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-describing-stacks.html
